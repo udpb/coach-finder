@@ -1,6 +1,6 @@
 /*
  * SelectionBar - Swiss Industrial Design
- * 하단 고정 바. 선택된 코치 목록 + 내보내기 버튼.
+ * 하단 고정 바. 선택된 코치 목록 + 내보내기 버튼. 다국어 지원.
  */
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,11 @@ import {
 } from "@/components/ui/dialog";
 import { FileText, Presentation, X, Download, User, Loader2 } from "lucide-react";
 import type { Coach } from "@/types/coach";
+import { CATEGORY_LABELS } from "@/types/coach";
 import { exportToDocx, exportToPptx } from "@/lib/exportUtils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface SelectionBarProps {
   selectedCoaches: Coach[];
@@ -32,22 +34,32 @@ export default function SelectionBar({
   const [exportOpen, setExportOpen] = useState(false);
   const [projectTitle, setProjectTitle] = useState("");
   const [exporting, setExporting] = useState(false);
+  const { lang, t } = useLanguage();
 
   if (selectedCoaches.length === 0) return null;
 
   const handleExport = async (type: "docx" | "pptx") => {
     setExporting(true);
     try {
-      const title = projectTitle.trim() || "언더독스 코치 프로필";
+      const defaultTitle = lang === "en" ? "Underdogs Coach Profile" : lang === "ja" ? "アンダードッグス コーチプロフィール" : "언더독스 코치 프로필";
+      const title = projectTitle.trim() || defaultTitle;
       if (type === "docx") {
         await exportToDocx(selectedCoaches, title);
       } else {
         await exportToPptx(selectedCoaches, title);
       }
-      toast.success(`${type.toUpperCase()} 파일이 다운로드됩니다.`);
+      toast.success(
+        lang === "en" ? `${type.toUpperCase()} file downloading.` :
+        lang === "ja" ? `${type.toUpperCase()}ファイルをダウンロードします。` :
+        `${type.toUpperCase()} 파일이 다운로드됩니다.`
+      );
       setExportOpen(false);
     } catch (err) {
-      toast.error("내보내기 중 오류가 발생했습니다. 다시 시도해 주세요.");
+      toast.error(
+        lang === "en" ? "Export error. Please try again." :
+        lang === "ja" ? "エクスポートエラー。もう一度お試しください。" :
+        "내보내기 중 오류가 발생했습니다. 다시 시도해 주세요."
+      );
       console.error(err);
     } finally {
       setExporting(false);
@@ -70,13 +82,13 @@ export default function SelectionBar({
               <span className="font-mono text-[20px] font-bold text-primary leading-none">
                 {selectedCoaches.length}
               </span>
-              <span className="text-[12px] text-muted-foreground">명 선택</span>
+              <span className="text-[12px] text-muted-foreground">{t("selected")}</span>
             </div>
 
             <div className="w-px h-8 bg-border" />
 
             {/* 선택된 코치 미니 아바타 */}
-            <div className="flex-1 flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-hide">
+            <div className="flex-1 flex items-center gap-1.5 overflow-x-auto py-1" style={{ scrollbarWidth: "none" }}>
               <AnimatePresence mode="popLayout">
                 {selectedCoaches.map((coach) => (
                   <motion.div
@@ -90,11 +102,7 @@ export default function SelectionBar({
                   >
                     <div className="w-5 h-5 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
                       {coach.photo_url ? (
-                        <img
-                          src={coach.photo_url}
-                          alt={coach.name}
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={coach.photo_url} alt={coach.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           <User className="w-3 h-3 text-gray-400" />
@@ -121,14 +129,14 @@ export default function SelectionBar({
                 onClick={onClear}
                 className="text-[11px] text-muted-foreground hover:text-primary transition-colors px-2 whitespace-nowrap"
               >
-                전체 해제
+                {t("clear_all")}
               </button>
               <Button
                 onClick={() => setExportOpen(true)}
                 className="h-8 px-4 text-[12px] font-semibold bg-primary hover:bg-primary/90 text-white rounded-[2px]"
               >
                 <Download className="w-3.5 h-3.5 mr-1.5" />
-                내보내기
+                {t("export_btn")}
               </Button>
             </div>
           </div>
@@ -140,36 +148,37 @@ export default function SelectionBar({
         <DialogContent className="max-w-md rounded-none border border-border">
           <DialogHeader>
             <DialogTitle className="text-[16px] font-bold">
-              제안서 내보내기
+              {t("export_title")}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div>
               <label className="text-[11px] uppercase font-semibold text-muted-foreground tracking-wider block mb-1.5">
-                프로젝트명 (선택)
+                {t("project_name")}
               </label>
               <Input
                 value={projectTitle}
                 onChange={(e) => setProjectTitle(e.target.value)}
-                placeholder="예: 2026 소셜벤처 육성 프로그램"
+                placeholder={t("project_placeholder")}
                 className="h-9 text-[13px] rounded-[2px]"
               />
             </div>
 
             <div>
               <span className="text-[11px] uppercase font-semibold text-muted-foreground tracking-wider block mb-2">
-                선택된 코치 ({selectedCoaches.length}명)
+                {t("selected_coaches")} ({selectedCoaches.length})
               </span>
               <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
-                {selectedCoaches.map((c) => (
-                  <span
-                    key={c.id}
-                    className="px-2 py-0.5 text-[11px] bg-muted text-foreground"
-                  >
-                    {c.name}
-                  </span>
-                ))}
+                {selectedCoaches.map((c) => {
+                  const catLabel = CATEGORY_LABELS[c.category]?.[lang] || c.category;
+                  return (
+                    <span key={c.id} className="px-2 py-0.5 text-[11px] bg-muted text-foreground">
+                      {c.name}
+                      <span className="text-muted-foreground ml-1 text-[9px]">{catLabel}</span>
+                    </span>
+                  );
+                })}
               </div>
             </div>
           </div>

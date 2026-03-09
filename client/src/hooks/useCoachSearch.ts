@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from "react";
 import type { Coach, FilterState } from "@/types/coach";
-import coachesData from "@/data/coaches.json";
+import coachesRaw from "@/data/coaches_db.json";
+
+const allCoachesData = coachesRaw as Coach[];
 
 const initialFilter: FilterState = {
   search: "",
@@ -10,17 +12,33 @@ const initialFilter: FilterState = {
   roles: [],
   overseas: null,
   resultCount: 5,
+  tiers: [],
+  categories: [],
+  countries: [],
 };
 
 export function useCoachSearch() {
   const [filters, setFilters] = useState<FilterState>(initialFilter);
   const [selectedCoaches, setSelectedCoaches] = useState<Set<number>>(new Set());
 
-  const allCoaches = useMemo(() => coachesData as Coach[], []);
+  const allCoaches = useMemo(() => allCoachesData, []);
+
+  // Stats
+  const stats = useMemo(() => {
+    const tierCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
+    const catCounts: Record<string, number> = {};
+    const countryCounts: Record<string, number> = {};
+    allCoaches.forEach((c) => {
+      tierCounts[c.tier] = (tierCounts[c.tier] || 0) + 1;
+      catCounts[c.category] = (catCounts[c.category] || 0) + 1;
+      countryCounts[c.country] = (countryCounts[c.country] || 0) + 1;
+    });
+    return { tierCounts, catCounts, countryCounts, total: allCoaches.length };
+  }, [allCoaches]);
 
   const filteredCoaches = useMemo(() => {
     return allCoaches.filter((coach) => {
-      // 텍스트 검색 (이름, 소속, 소개, 경력, 현재 업무)
+      // Text search
       if (filters.search) {
         const q = filters.search.toLowerCase();
         const searchFields = [
@@ -32,33 +50,55 @@ export function useCoachSearch() {
           coach.education,
           coach.underdogs_history,
           coach.tools_skills,
+          coach.main_field || "",
+          coach.country || "",
           ...coach.expertise,
           ...coach.industries,
+          ...coach.regions,
         ].join(" ").toLowerCase();
         if (!searchFields.includes(q)) return false;
       }
 
-      // 전문성 필터
+      // Tier filter
+      if (filters.tiers.length > 0) {
+        if (!filters.tiers.includes(coach.tier)) return false;
+      }
+
+      // Category filter
+      if (filters.categories.length > 0) {
+        if (!filters.categories.includes(coach.category)) return false;
+      }
+
+      // Country filter
+      if (filters.countries.length > 0) {
+        if (!filters.countries.includes(coach.country)) return false;
+      }
+
+      // Expertise filter
       if (filters.expertise.length > 0) {
-        if (!filters.expertise.some((e) => coach.expertise.includes(e))) return false;
+        const coachExp = [...coach.expertise, coach.main_field || ""].map(s => s.toLowerCase());
+        if (!filters.expertise.some((e) => coachExp.some(ce => ce.includes(e.toLowerCase()) || e.toLowerCase().includes(ce)))) return false;
       }
 
-      // 업종 필터
+      // Industry filter
       if (filters.industries.length > 0) {
-        if (!filters.industries.some((i) => coach.industries.includes(i))) return false;
+        const coachInd = coach.industries.map(s => s.toLowerCase());
+        if (!filters.industries.some((i) => coachInd.some(ci => ci.includes(i.toLowerCase()) || i.toLowerCase().includes(ci)))) return false;
       }
 
-      // 지역 필터
+      // Region filter
       if (filters.regions.length > 0) {
-        if (!filters.regions.some((r) => coach.regions.includes(r))) return false;
+        const coachReg = coach.regions.map(s => s.toLowerCase());
+        if (!filters.regions.some((r) => coachReg.some(cr => cr.includes(r.toLowerCase()) || r.toLowerCase().includes(cr)))) return false;
       }
 
-      // 역할 필터
+      // Role filter
       if (filters.roles.length > 0) {
-        if (!filters.roles.some((r) => coach.roles.includes(r))) return false;
+        const coachRoles = coach.roles.map(s => s.toLowerCase());
+        if (!filters.roles.some((r) => coachRoles.some(cr => cr.includes(r.toLowerCase()) || r.toLowerCase().includes(cr)))) return false;
       }
 
-      // 해외 코칭 필터
+      // Overseas filter
       if (filters.overseas !== null) {
         if (coach.overseas !== filters.overseas) return false;
       }
@@ -67,31 +107,52 @@ export function useCoachSearch() {
     });
   }, [allCoaches, filters]);
 
-  // 추천 코치 (필터 매칭 점수 기반 정렬)
+  // Ranked coaches with tier-weighted scoring
   const rankedCoaches = useMemo(() => {
     return filteredCoaches
       .map((coach) => {
         let score = 0;
-        // 전문성 매칭 점수
+
+        // Tier bonus: Tier 1 gets highest priority
+        if (coach.tier === 1) score += 10;
+        else if (coach.tier === 2) score += 5;
+        else score += 1;
+
+        // Expertise match
         filters.expertise.forEach((e) => {
-          if (coach.expertise.includes(e)) score += 3;
+          const el = e.toLowerCase();
+          if (coach.expertise.some(ce => ce.toLowerCase().includes(el) || el.includes(ce.toLowerCase()))) score += 3;
+          if ((coach.main_field || "").toLowerCase().includes(el)) score += 2;
         });
-        // 업종 매칭 점수
+
+        // Industry match
         filters.industries.forEach((i) => {
-          if (coach.industries.includes(i)) score += 2;
+          const il = i.toLowerCase();
+          if (coach.industries.some(ci => ci.toLowerCase().includes(il) || il.includes(ci.toLowerCase()))) score += 2;
         });
-        // 지역 매칭 점수
+
+        // Region match
         filters.regions.forEach((r) => {
-          if (coach.regions.includes(r)) score += 1;
+          if (coach.regions.some(cr => cr.includes(r) || r.includes(cr))) score += 1;
         });
-        // 역할 매칭 점수
+
+        // Role match
         filters.roles.forEach((r) => {
-          if (coach.roles.includes(r)) score += 2;
+          if (coach.roles.some(cr => cr.includes(r) || r.includes(cr))) score += 2;
         });
-        // 사진이 있으면 가산점
+
+        // Photo bonus
         if (coach.photo_url) score += 0.5;
-        // 경력 연수 가산점
+
+        // Career years bonus
         score += Math.min(coach.career_years / 10, 1);
+
+        // Has career history bonus
+        if (coach.career_history) score += 1;
+
+        // Has startup experience bonus
+        if (coach.has_startup) score += 0.5;
+
         return { coach, score };
       })
       .sort((a, b) => b.score - a.score);
@@ -146,5 +207,6 @@ export function useCoachSearch() {
     selectTopCoaches,
     clearSelection,
     allCoaches,
+    stats,
   };
 }

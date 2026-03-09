@@ -17,6 +17,7 @@ import {
 import { saveAs } from "file-saver";
 import PptxGenJS from "pptxgenjs";
 import type { Coach } from "@/types/coach";
+import { TIER_LABELS, CATEGORY_LABELS } from "@/types/coach";
 
 async function fetchImageAsBuffer(url: string): Promise<ArrayBuffer | null> {
   try {
@@ -35,6 +36,14 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
     binary += String.fromCharCode(bytes[i]);
   }
   return btoa(binary);
+}
+
+function getTierLabel(tier: number): string {
+  return TIER_LABELS[tier]?.ko || `Tier ${tier}`;
+}
+
+function getCatLabel(cat: string): string {
+  return CATEGORY_LABELS[cat]?.ko || cat;
 }
 
 // ============ DOCX 내보내기 ============
@@ -83,13 +92,23 @@ export async function exportToDocx(coaches: Coach[], projectTitle?: string) {
       imageBuffer = await fetchImageAsBuffer(coach.photo_url);
     }
 
-    // 코치 이름 + 소속
+    // 티어 + 카테고리 + 코치 이름
     children.push(
       new Paragraph({
-        spacing: { before: 400, after: 120 },
+        spacing: { before: 400, after: 60 },
+        children: [
+          new TextRun({ text: `[T${coach.tier}] `, bold: true, size: 18, font: "맑은 고딕", color: "E53935" }),
+          new TextRun({ text: getCatLabel(coach.category), size: 18, font: "맑은 고딕", color: "888888" }),
+          ...(coach.country && coach.country !== "한국" ? [
+            new TextRun({ text: `  |  ${coach.country}`, size: 18, font: "맑은 고딕", color: "7C3AED" }),
+          ] : []),
+        ],
+      }),
+      new Paragraph({
+        spacing: { after: 120 },
         children: [
           new TextRun({ text: coach.name, bold: true, size: 34, font: "맑은 고딕", color: "1A1A1A" }),
-          new TextRun({ text: `   ${coach.organization}  |  ${coach.position}`, size: 20, font: "맑은 고딕", color: "888888" }),
+          new TextRun({ text: `   ${[coach.organization, coach.position].filter(Boolean).join("  |  ")}`, size: 20, font: "맑은 고딕", color: "888888" }),
         ],
       })
     );
@@ -124,10 +143,11 @@ export async function exportToDocx(coaches: Coach[], projectTitle?: string) {
       { label: "경험업종", value: coach.industries.join(", ") },
       { label: "코칭지역", value: coach.regions.join(", ") },
       { label: "역할", value: coach.roles.join(", ") },
-      { label: "경력", value: coach.career_years_raw || `${coach.career_years}년` },
+      { label: "경력", value: coach.career_years_raw || (coach.career_years > 0 ? `${coach.career_years}년` : "-") },
       { label: "학력", value: coach.education },
-      { label: "해외코칭", value: coach.overseas ? (coach.overseas_detail || "가능") : "해당 없음" },
-    ];
+      { label: "해외코칭", value: coach.overseas ? (coach.overseas_detail || "가능") : "" },
+      { label: "국적", value: coach.country !== "한국" ? coach.country : "" },
+    ].filter(info => info.value && info.value.trim() !== "" && info.value !== "-");
 
     const rows = infoLines.map(
       (info) =>
@@ -176,13 +196,15 @@ export async function exportToDocx(coaches: Coach[], projectTitle?: string) {
         })
     );
 
-    children.push(
-      new Table({
-        width: { size: 9000, type: WidthType.DXA },
-        layout: TableLayoutType.FIXED,
-        rows,
-      })
-    );
+    if (rows.length > 0) {
+      children.push(
+        new Table({
+          width: { size: 9000, type: WidthType.DXA },
+          layout: TableLayoutType.FIXED,
+          rows,
+        })
+      );
+    }
 
     // 주요 이력
     if (coach.career_history) {
@@ -196,7 +218,7 @@ export async function exportToDocx(coaches: Coach[], projectTitle?: string) {
         new Paragraph({
           spacing: { after: 120 },
           children: [
-            new TextRun({ text: coach.career_history.slice(0, 1000), size: 17, font: "맑은 고딕", color: "444444" }),
+            new TextRun({ text: coach.career_history.slice(0, 1200), size: 17, font: "맑은 고딕", color: "444444" }),
           ],
         })
       );
@@ -265,7 +287,6 @@ export async function exportToPptx(coaches: Coach[], projectTitle?: string) {
     slide.background = { color: "FFFFFF" };
     slide.addShape("rect", { x: 0, y: 0, w: "100%", h: 0.04, fill: { color: "E53935" } });
 
-    // 페이지 번호
     slide.addText(`${Math.floor(i / 2) + 1} / ${Math.ceil(coaches.length / 2)}`, {
       x: 11.5, y: 7.1, w: 1.5, h: 0.3,
       fontSize: 9, color: "BBBBBB", fontFace: "맑은 고딕", align: "right",
@@ -293,75 +314,73 @@ export async function exportToPptx(coaches: Coach[], projectTitle?: string) {
         slide.addShape("ellipse", { x: xBase, y: 0.35, w: 1.2, h: 1.2, fill: { color: "EEEEEE" } });
       }
 
+      // 티어 + 카테고리 뱃지
+      slide.addText(`T${coach.tier} | ${getCatLabel(coach.category)}${coach.country !== "한국" ? ` | ${coach.country}` : ""}`, {
+        x: xBase + 1.5, y: 0.2, w: 4, h: 0.22,
+        fontSize: 8, color: "E53935", fontFace: "맑은 고딕",
+      });
+
       // 이름
       slide.addText(coach.name, {
-        x: xBase + 1.5, y: 0.35, w: 4, h: 0.45,
+        x: xBase + 1.5, y: 0.42, w: 4, h: 0.45,
         fontSize: 20, bold: true, color: "1A1A1A", fontFace: "맑은 고딕",
       });
 
       // 소속/직책
-      slide.addText(`${coach.organization}  |  ${coach.position}`, {
-        x: xBase + 1.5, y: 0.8, w: 4, h: 0.3,
+      slide.addText([coach.organization, coach.position].filter(Boolean).join("  |  ") || coach.main_field || "", {
+        x: xBase + 1.5, y: 0.87, w: 4, h: 0.3,
         fontSize: 10, color: "888888", fontFace: "맑은 고딕",
       });
 
       // 한줄 소개
       if (coach.intro) {
         slide.addText(`"${coach.intro}"`, {
-          x: xBase + 1.5, y: 1.1, w: 4, h: 0.35,
+          x: xBase + 1.5, y: 1.17, w: 4, h: 0.35,
           fontSize: 9, italic: true, color: "E53935", fontFace: "맑은 고딕",
         });
       }
 
       // 정보 테이블
-      const tblRows: PptxGenJS.TableRow[] = [
-        [
-          { text: "전문분야", options: { fontSize: 8, bold: true, color: "555555", fill: { color: "F5F5F5" }, fontFace: "맑은 고딕" } },
-          { text: coach.expertise.slice(0, 4).join(", "), options: { fontSize: 8, color: "333333", fontFace: "맑은 고딕" } },
-        ],
-        [
-          { text: "경험업종", options: { fontSize: 8, bold: true, color: "555555", fill: { color: "F5F5F5" }, fontFace: "맑은 고딕" } },
-          { text: coach.industries.join(", "), options: { fontSize: 8, color: "333333", fontFace: "맑은 고딕" } },
-        ],
-        [
-          { text: "코칭지역", options: { fontSize: 8, bold: true, color: "555555", fill: { color: "F5F5F5" }, fontFace: "맑은 고딕" } },
-          { text: coach.regions.slice(0, 5).join(", "), options: { fontSize: 8, color: "333333", fontFace: "맑은 고딕" } },
-        ],
-        [
-          { text: "역할", options: { fontSize: 8, bold: true, color: "555555", fill: { color: "F5F5F5" }, fontFace: "맑은 고딕" } },
-          { text: coach.roles.join(", "), options: { fontSize: 8, color: "333333", fontFace: "맑은 고딕" } },
-        ],
-        [
-          { text: "경력", options: { fontSize: 8, bold: true, color: "555555", fill: { color: "F5F5F5" }, fontFace: "맑은 고딕" } },
-          { text: coach.career_years_raw || `${coach.career_years}년`, options: { fontSize: 8, color: "333333", fontFace: "맑은 고딕" } },
-        ],
-        [
-          { text: "학력", options: { fontSize: 8, bold: true, color: "555555", fill: { color: "F5F5F5" }, fontFace: "맑은 고딕" } },
-          { text: coach.education || "-", options: { fontSize: 8, color: "333333", fontFace: "맑은 고딕" } },
-        ],
-      ];
+      const tblData: { label: string; value: string }[] = [
+        { label: "전문분야", value: coach.expertise.slice(0, 4).join(", ") },
+        { label: "경험업종", value: coach.industries.join(", ") },
+        { label: "코칭지역", value: coach.regions.slice(0, 5).join(", ") },
+        { label: "역할", value: coach.roles.join(", ") },
+        { label: "경력", value: coach.career_years_raw || (coach.career_years > 0 ? `${coach.career_years}년` : "-") },
+        { label: "학력", value: coach.education || "-" },
+      ].filter(d => d.value && d.value !== "-");
 
-      slide.addTable(tblRows, {
-        x: xBase, y: 1.8, w: 5.8, colW: [0.9, 4.9],
-        border: { type: "solid", pt: 0.5, color: "EEEEEE" },
-        rowH: [0.28, 0.28, 0.28, 0.28, 0.28, 0.28],
-      });
+      const tblRows: PptxGenJS.TableRow[] = tblData.map(d => [
+        { text: d.label, options: { fontSize: 8, bold: true, color: "555555", fill: { color: "F5F5F5" }, fontFace: "맑은 고딕" } },
+        { text: d.value, options: { fontSize: 8, color: "333333", fontFace: "맑은 고딕" } },
+      ]);
+
+      if (tblRows.length > 0) {
+        slide.addTable(tblRows, {
+          x: xBase, y: 1.8, w: 5.8, colW: [0.9, 4.9],
+          border: { type: "solid", pt: 0.5, color: "EEEEEE" },
+          rowH: Array(tblRows.length).fill(0.28),
+        });
+      }
 
       // 주요 이력
       const careerText = coach.career_history
         ? coach.career_history.slice(0, 400) + (coach.career_history.length > 400 ? "..." : "")
-        : "-";
+        : "";
 
-      slide.addText("주요 이력", {
-        x: xBase, y: 3.7, w: 5.8, h: 0.28,
-        fontSize: 9, bold: true, color: "1A1A1A", fontFace: "맑은 고딕",
-      });
+      if (careerText) {
+        const tblEndY = 1.8 + tblRows.length * 0.28 + 0.15;
+        slide.addText("주요 이력", {
+          x: xBase, y: tblEndY, w: 5.8, h: 0.28,
+          fontSize: 9, bold: true, color: "1A1A1A", fontFace: "맑은 고딕",
+        });
 
-      slide.addText(careerText, {
-        x: xBase, y: 4.0, w: 5.8, h: 2.8,
-        fontSize: 7.5, color: "555555", fontFace: "맑은 고딕", valign: "top",
-        lineSpacingMultiple: 1.3,
-      });
+        slide.addText(careerText, {
+          x: xBase, y: tblEndY + 0.3, w: 5.8, h: 7 - tblEndY - 0.5,
+          fontSize: 7.5, color: "555555", fontFace: "맑은 고딕", valign: "top",
+          lineSpacingMultiple: 1.3,
+        });
+      }
     }
   }
 

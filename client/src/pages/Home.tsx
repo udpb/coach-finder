@@ -1,7 +1,7 @@
 /*
  * Home - Swiss Industrial Dashboard
  * 좌측 필터 + 우측 코치 카드 그리드
- * 하단 선택 바 + 내보내기
+ * 티어 기반 UI, 다국어 지원
  */
 import { useState } from "react";
 import { useCoachSearch } from "@/hooks/useCoachSearch";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { CheckSquare, Users, Search } from "lucide-react";
 import type { Coach } from "@/types/coach";
 import { AnimatePresence } from "framer-motion";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Home() {
   const {
@@ -27,8 +28,10 @@ export default function Home() {
     selectTopCoaches,
     clearSelection,
     allCoaches,
+    stats,
   } = useCoachSearch();
 
+  const { t } = useLanguage();
   const [detailCoach, setDetailCoach] = useState<Coach | null>(null);
   const [viewMode, setViewMode] = useState<"recommended" | "all">("recommended");
 
@@ -43,7 +46,10 @@ export default function Home() {
     filters.regions.length > 0 ||
     filters.roles.length > 0 ||
     filters.overseas !== null ||
-    filters.search !== "";
+    filters.search !== "" ||
+    filters.tiers.length > 0 ||
+    filters.categories.length > 0 ||
+    filters.countries.length > 0;
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -54,6 +60,7 @@ export default function Home() {
         resetFilters={resetFilters}
         totalCount={allCoaches.length}
         filteredCount={filteredCoaches.length}
+        stats={stats}
       />
 
       {/* 우측 메인 영역 */}
@@ -72,7 +79,7 @@ export default function Home() {
                       : "bg-white text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  추천 TOP {filters.resultCount}
+                  {t("recommended")} {filters.resultCount}
                 </button>
                 <button
                   onClick={() => setViewMode("all")}
@@ -82,7 +89,7 @@ export default function Home() {
                       : "bg-white text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  전체 ({filteredCoaches.length})
+                  {t("all_results")} ({filteredCoaches.length})
                 </button>
               </div>
 
@@ -94,7 +101,7 @@ export default function Home() {
                   className="h-7 px-3 text-[11px] rounded-[2px] border-border hover:bg-primary hover:text-white hover:border-primary"
                 >
                   <CheckSquare className="w-3 h-3 mr-1" />
-                  전체 선택
+                  {t("select_all")}
                 </Button>
               )}
 
@@ -102,7 +109,7 @@ export default function Home() {
               {hasActiveFilters && (
                 <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                   <Search className="w-3 h-3" />
-                  <span>필터 적용 중</span>
+                  <span>{t("filter_active")}</span>
                 </div>
               )}
             </div>
@@ -114,7 +121,7 @@ export default function Home() {
                 <span className="font-mono font-semibold text-foreground">
                   {selectedCoaches.size}
                 </span>
-                명 선택됨
+                {t("selected")}
               </span>
             </div>
           </div>
@@ -128,17 +135,17 @@ export default function Home() {
                 <Users className="w-7 h-7 text-muted-foreground" />
               </div>
               <p className="text-[14px] font-semibold text-foreground mb-1">
-                조건에 맞는 코치가 없습니다
+                {t("no_results")}
               </p>
               <p className="text-[12px] text-muted-foreground mb-4">
-                필터 조건을 변경하거나 검색어를 수정해 보세요
+                {t("no_results_sub")}
               </p>
               <Button
                 onClick={resetFilters}
                 variant="outline"
                 className="h-8 px-4 text-[12px] rounded-[2px]"
               >
-                필터 초기화
+                {t("reset_filters")}
               </Button>
             </div>
           ) : (

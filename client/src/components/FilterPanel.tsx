@@ -1,19 +1,24 @@
 /*
  * FilterPanel - Swiss Industrial Design
- * 좌측 고정 필터 패널. 1px 구분선, 그레이스케일 기반.
+ * 좌측 고정 필터 패널. 티어/카테고리/국적 필터 추가. 다국어 지원.
  */
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
-import type { FilterState } from "@/types/coach";
+import { Search, RotateCcw, ChevronDown, ChevronUp, Globe } from "lucide-react";
+import type { FilterState, TierType, LangCode } from "@/types/coach";
 import {
   EXPERTISE_OPTIONS,
   INDUSTRY_OPTIONS,
   REGION_OPTIONS,
   ROLE_OPTIONS,
+  CATEGORY_OPTIONS,
+  COUNTRY_OPTIONS,
+  TIER_LABELS,
+  CATEGORY_LABELS,
 } from "@/types/coach";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface FilterPanelProps {
   filters: FilterState;
@@ -21,6 +26,12 @@ interface FilterPanelProps {
   resetFilters: () => void;
   totalCount: number;
   filteredCount: number;
+  stats: {
+    tierCounts: Record<number, number>;
+    catCounts: Record<string, number>;
+    countryCounts: Record<string, number>;
+    total: number;
+  };
 }
 
 function FilterSection({
@@ -29,12 +40,14 @@ function FilterSection({
   selected,
   onChange,
   defaultOpen = false,
+  renderLabel,
 }: {
   title: string;
   options: string[];
   selected: string[];
   onChange: (val: string[]) => void;
   defaultOpen?: boolean;
+  renderLabel?: (opt: string) => string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -67,7 +80,7 @@ function FilterSection({
         )}
       </button>
       {open && (
-        <div className="px-4 pb-3 space-y-0.5">
+        <div className="px-4 pb-3 space-y-0.5 max-h-[240px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
           {options.map((opt) => (
             <label
               key={opt}
@@ -79,7 +92,7 @@ function FilterSection({
                 className="mt-0.5 rounded-[2px] border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
               />
               <span className="text-[12px] leading-snug text-muted-foreground group-hover:text-foreground transition-colors">
-                {opt}
+                {renderLabel ? renderLabel(opt) : opt}
               </span>
             </label>
           ))}
@@ -89,31 +102,58 @@ function FilterSection({
   );
 }
 
+const LANG_OPTIONS: { code: LangCode; label: string; flag: string }[] = [
+  { code: "ko", label: "한국어", flag: "KR" },
+  { code: "en", label: "EN", flag: "EN" },
+  { code: "ja", label: "日本語", flag: "JP" },
+];
+
 export default function FilterPanel({
   filters,
   updateFilter,
   resetFilters,
   totalCount,
   filteredCount,
+  stats,
 }: FilterPanelProps) {
+  const { lang, setLang, t } = useLanguage();
+
   return (
     <div className="w-[300px] flex-shrink-0 border-r border-border bg-white h-screen flex flex-col sticky top-0">
       {/* 헤더 */}
-      <div className="px-4 py-5 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
+      <div className="px-4 py-4 border-b border-border">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-1 h-5 bg-primary" />
             <h1 className="text-[15px] font-bold tracking-tight text-foreground">
-              코치 검색
+              {t("title")}
             </h1>
           </div>
-          <button
-            onClick={resetFilters}
-            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors"
-          >
-            <RotateCcw className="w-3 h-3" />
-            초기화
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Language switcher */}
+            <div className="flex items-center gap-0.5 border border-border rounded-[3px] overflow-hidden">
+              {LANG_OPTIONS.map((opt) => (
+                <button
+                  key={opt.code}
+                  onClick={() => setLang(opt.code)}
+                  className={`px-1.5 py-0.5 text-[10px] font-mono transition-all ${
+                    lang === opt.code
+                      ? "bg-foreground text-white"
+                      : "bg-white text-muted-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  {opt.flag}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={resetFilters}
+              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              {t("reset")}
+            </button>
+          </div>
         </div>
 
         {/* 검색 */}
@@ -122,7 +162,7 @@ export default function FilterPanel({
           <Input
             value={filters.search}
             onChange={(e) => updateFilter("search", e.target.value)}
-            placeholder="이름, 소속, 키워드 검색"
+            placeholder={t("search_placeholder")}
             className="pl-8 h-8 text-[12px] bg-muted/50 border-0 rounded-[3px] placeholder:text-muted-foreground/60 focus-visible:ring-1 focus-visible:ring-primary"
           />
         </div>
@@ -133,50 +173,100 @@ export default function FilterPanel({
             {filteredCount}
           </span>
           <span className="text-[11px] text-muted-foreground">
-            / {totalCount}명
+            / {totalCount}{t("total")}
           </span>
+        </div>
+
+        {/* Tier 미니 통계 */}
+        <div className="mt-2 flex gap-1">
+          {([1, 2, 3] as TierType[]).map((tier) => (
+            <div
+              key={tier}
+              className={`flex-1 text-center py-1 rounded-[2px] text-[10px] font-mono cursor-pointer transition-all border ${
+                filters.tiers.includes(tier)
+                  ? tier === 1
+                    ? "bg-primary text-white border-primary"
+                    : tier === 2
+                    ? "bg-foreground text-white border-foreground"
+                    : "bg-muted-foreground text-white border-muted-foreground"
+                  : "bg-muted/50 text-muted-foreground border-transparent hover:border-border"
+              }`}
+              onClick={() => {
+                const next = filters.tiers.includes(tier)
+                  ? filters.tiers.filter((t) => t !== tier)
+                  : [...filters.tiers, tier];
+                updateFilter("tiers", next);
+              }}
+            >
+              T{tier} · {stats.tierCounts[tier] || 0}
+            </div>
+          ))}
         </div>
       </div>
 
       {/* 필터 섹션 */}
       <ScrollArea className="flex-1">
+        {/* 유형 필터 */}
         <FilterSection
-          title="전문분야"
+          title={t("category")}
+          options={CATEGORY_OPTIONS}
+          selected={filters.categories}
+          onChange={(val) => updateFilter("categories", val)}
+          defaultOpen={true}
+          renderLabel={(opt) => {
+            const label = CATEGORY_LABELS[opt];
+            const count = stats.catCounts[opt] || 0;
+            return `${label ? label[lang] : opt} (${count})`;
+          }}
+        />
+
+        {/* 국적 필터 */}
+        <FilterSection
+          title={t("country")}
+          options={COUNTRY_OPTIONS}
+          selected={filters.countries}
+          onChange={(val) => updateFilter("countries", val)}
+          renderLabel={(opt) => {
+            const count = stats.countryCounts[opt] || 0;
+            return `${opt} (${count})`;
+          }}
+        />
+
+        <FilterSection
+          title={t("expertise")}
           options={EXPERTISE_OPTIONS}
           selected={filters.expertise}
           onChange={(val) => updateFilter("expertise", val)}
-          defaultOpen={true}
         />
         <FilterSection
-          title="경험 업종"
+          title={t("industry")}
           options={INDUSTRY_OPTIONS}
           selected={filters.industries}
           onChange={(val) => updateFilter("industries", val)}
         />
         <FilterSection
-          title="코칭 가능 지역"
+          title={t("region")}
           options={REGION_OPTIONS}
           selected={filters.regions}
           onChange={(val) => updateFilter("regions", val)}
         />
         <FilterSection
-          title="역할"
+          title={t("role")}
           options={ROLE_OPTIONS}
           selected={filters.roles}
           onChange={(val) => updateFilter("roles", val)}
-          defaultOpen={true}
         />
 
         {/* 해외 코칭 */}
         <div className="border-b border-border px-4 py-3">
           <span className="text-[13px] font-semibold tracking-tight text-foreground block mb-2">
-            해외 코칭
+            {t("overseas_label")}
           </span>
           <div className="flex gap-1.5">
             {[
-              { label: "전체", value: null },
-              { label: "가능", value: true },
-              { label: "불가", value: false },
+              { labelKey: "overseas_all", value: null },
+              { labelKey: "overseas_yes", value: true },
+              { labelKey: "overseas_no", value: false },
             ].map((opt) => (
               <button
                 key={String(opt.value)}
@@ -187,7 +277,7 @@ export default function FilterPanel({
                     : "bg-white text-muted-foreground border-border hover:border-foreground"
                 }`}
               >
-                {opt.label}
+                {t(opt.labelKey)}
               </button>
             ))}
           </div>
@@ -196,10 +286,10 @@ export default function FilterPanel({
         {/* 추천 인원 수 */}
         <div className="px-4 py-3 border-b border-border">
           <span className="text-[13px] font-semibold tracking-tight text-foreground block mb-2">
-            추천 인원 수
+            {t("rec_count")}
           </span>
           <div className="flex gap-1.5 flex-wrap">
-            {[3, 5, 7, 10, 15, 20].map((n) => (
+            {[3, 5, 7, 10, 15, 20, 50].map((n) => (
               <button
                 key={n}
                 onClick={() => updateFilter("resultCount", n)}
