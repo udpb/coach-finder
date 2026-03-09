@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.hg
+.svn
+*.log
+.env
+.env.*
+Dockerfile
+.dockerignore
+python-service/venv
+python-service/__pycache__
+python-service/*.db
+python-service/*.faiss

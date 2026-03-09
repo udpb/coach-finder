@@ -190,4 +190,31 @@ export const UI_LABELS: Record<string, Record<LangCode, string>> = {
   edit: { ko: "수정", en: "Edit", ja: "編集" },
   ai_recommend: { ko: "AI 맞춤 코치 추천", en: "AI Recommend", ja: "AI コーチ推薦" },
   ai_recommend_desc: { ko: "제안요청서(RFP) 내용을 입력하시면 최적의 코치진을 자동으로 추천해 드립니다.", en: "Enter RFP details for automatic coach recommendations.", ja: "RFPを入力すると最適なコーチを推薦します。" },
+  // Auth
+  login: { ko: "로그인", en: "Login", ja: "ログイン" },
+  logout: { ko: "로그아웃", en: "Logout", ja: "ログアウト" },
+  login_title: { ko: "언더독스 코치 검색 시스템", en: "Underdogs Coach Finder", ja: "アンダードッグス コーチ検索" },
+  login_subtitle: { ko: "허가된 계정으로 로그인해 주세요.", en: "Please sign in with an authorized account.", ja: "許可されたアカウントでログインしてください。" },
+  email: { ko: "이메일", en: "Email", ja: "メールアドレス" },
+  password: { ko: "비밀번호", en: "Password", ja: "パスワード" },
+  login_error: { ko: "이메일 또는 비밀번호가 올바르지 않습니다.", en: "Invalid email or password.", ja: "メールアドレスまたはパスワードが正しくありません。" },
+  login_success: { ko: "로그인 성공!", en: "Login successful!", ja: "ログイン成功！" },
+  // Document Generation
+  generate_doc: { ko: "문서 생성", en: "Generate Document", ja: "文書生成" },
+  generate_word: { ko: "제안서 (Word)", en: "Proposal (Word)", ja: "提案書 (Word)" },
+  generate_pptx: { ko: "프레젠테이션 (PPTX)", en: "Presentation (PPTX)", ja: "プレゼン (PPTX)" },
+  doc_generating: { ko: "문서 생성 중...", en: "Generating document...", ja: "文書生成中..." },
+  doc_complete: { ko: "문서 생성 완료", en: "Document ready", ja: "文書生成完了" },
+  download: { ko: "다운로드", en: "Download", ja: "ダウンロード" },
+  // Budget
+  budget_estimate: { ko: "예산 산출", en: "Budget Estimate", ja: "予算見積" },
+  budget_total: { ko: "총 예산", en: "Total Budget", ja: "総予算" },
+  budget_detail: { ko: "상세 내역", en: "Details", ja: "詳細内訳" },
+  // General
+  loading: { ko: "로딩 중...", en: "Loading...", ja: "読み込み中..." },
+  error: { ko: "오류가 발생했습니다.", en: "An error occurred.", ja: "エラーが発生しました。" },
+  confirm: { ko: "확인", en: "Confirm", ja: "確認" },
+  cancel: { ko: "취소", en: "Cancel", ja: "キャンセル" },
+  save: { ko: "저장", en: "Save", ja: "保存" },
+  delete_confirm: { ko: "삭제하시겠습니까?", en: "Delete this entry?", ja: "削除しますか？" },
 };

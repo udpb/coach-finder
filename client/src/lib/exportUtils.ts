@@ -386,3 +386,28 @@ export async function exportToPptx(coaches: Coach[], projectTitle?: string) {
 
   pptx.writeFile({ fileName: `${title}_${new Date().toISOString().slice(0, 10)}.pptx` });
 }
+
+// ============ 서버 기반 내보내기 (FastAPI) ============
+export async function exportToServerGeneratedDoc(coaches: Coach[], projectTitle: string, docType: "docx" | "pptx") {
+  const response = await fetch("/api/v1/generate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      coaches,
+      project_title: projectTitle,
+      doc_type: docType,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "문서 생성 중 오류가 발생했습니다.");
+  }
+
+  const blob = await response.blob();
+  const extension = docType === "docx" ? "docx" : "pptx";
+  saveAs(blob, `${projectTitle}.${extension}`);
+}
+
