@@ -48,6 +48,9 @@ export default function Home() {
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [editCoach, setEditCoach] = useState<Coach | null>(null);
   const [allPage, setAllPage] = useState(1);
+  
+  // Expose modal open function for FilterPanel
+  (window as any).dispatchAiModalOpen = () => setAiModalOpen(true);
 
   const allFiltered = filteredCoaches.map((c) => ({ coach: c, score: 0 }));
   const displayCoaches =
@@ -94,11 +97,12 @@ export default function Home() {
   // AI 추천: 서버 우선 시도, 실패 시 클라이언트 키워드 검색으로 폴백
   const handleAiRecommend = useCallback(async (text: string) => {
     try {
-      const res = await fetch('/api/v1/recommend', {
+      const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${apiBase}/api/v1/recommend`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rfp_text: text }),
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(15000), // Increased timeout for serverless wake-up
       });
       if (!res.ok) throw new Error('server_error');
       const data = await res.json();

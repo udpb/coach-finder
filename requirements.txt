@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-docx
+python-pptx
+mediapipe
+opencv-python-headless
+langchain
+langchain-community
+langchain-google-genai
+pydantic
+pydantic-settings
+python-dotenv
+faiss-cpu

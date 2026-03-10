@@ -42,6 +42,10 @@ def extract_rfp_info(rfp_text: str) -> dict:
     return result
 
 
+
+# Type alias for extraction result (used by endpoints)
+RFPExtraction = dict
+
 def build_search_query(extraction: dict) -> str:
     """
     Converts the structured extraction into a dense vector search query.

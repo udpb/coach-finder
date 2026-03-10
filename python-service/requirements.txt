@@ -1,11 +1,8 @@
 fastapi
-uvicorn
-python-docx
-python-pptx
-mediapipe
-opencv-python-headless
+uvicorn[standard]
 langchain
 langchain-google-genai
+google-generativeai
 pydantic
 pydantic-settings
 python-dotenv

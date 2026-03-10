@@ -167,14 +167,34 @@ export default function FilterPanel({
           />
         </div>
 
-        {/* 결과 카운터 */}
-        <div className="mt-3 flex items-baseline gap-1.5">
-          <span className="font-mono text-[24px] font-bold text-foreground leading-none tracking-tighter">
-            {filteredCount}
-          </span>
-          <span className="text-[11px] text-muted-foreground">
-            / {totalCount}{t("total")}
-          </span>
+        {/* 상단 툴바/통계 */}
+        <div className="mt-3 flex items-baseline justify-between gap-1.5">
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-mono text-[24px] font-bold text-foreground leading-none tracking-tighter">
+              {filteredCount}
+            </span>
+            <span className="text-[11px] text-muted-foreground">
+              / {totalCount}{t("total")}
+            </span>
+          </div>
+        </div>
+
+        {/* AI 검색 (Gemini) */}
+        <div className="mt-4 p-3 bg-indigo-50/50 border border-indigo-100 rounded-[3px] space-y-2">
+          <div className="flex items-center gap-1.5 text-indigo-700 font-semibold text-[11px]">
+            <Globe className="w-3 h-3" />
+            <span>AI 맞춤 추천 (RFP 기반)</span>
+          </div>
+          <p className="text-[10px] text-indigo-600/70 leading-relaxed">
+            요구사항(RFP)을 입력하면 Gemini AI가 분석하여 최적의 코치를 추천합니다.
+          </p>
+          <button
+            onClick={() => (window as any).dispatchAiModalOpen?.()}
+            className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium rounded-[2px] transition-colors flex items-center justify-center gap-1.5"
+          >
+            <Search className="w-3 h-3" />
+            AI 추천 받기
+          </button>
         </div>
 
         {/* Tier 미니 통계 */}
