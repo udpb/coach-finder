@@ -1,0 +1,6 @@
+python-service/
+requirements.txt
+__init__.py
+ingest_data.py
+processor.py
+Dockerfile
