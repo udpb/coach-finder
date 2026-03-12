@@ -16,6 +16,7 @@ import {
   CATEGORY_OPTIONS,
   COUNTRY_OPTIONS,
   TIER_LABELS,
+  TIER_SHORT,
   CATEGORY_LABELS,
 } from "@/types/coach";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -218,7 +219,7 @@ export default function FilterPanel({
                 updateFilter("tiers", next);
               }}
             >
-              T{tier} · {stats.tierCounts[tier] || 0}
+              {TIER_SHORT[tier]} · {stats.tierCounts[tier] || 0}
             </div>
           ))}
         </div>

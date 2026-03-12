@@ -1,15 +1,24 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import {
+  auth,
+  googleProvider,
+  signInWithPopup,
+  firebaseSignOut,
+  isFirebaseConfigured,
+} from "@/lib/firebase";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   user: string | null;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  isFirebaseReady: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// 허용된 계정 목록 (실제 운영 시 서버 사이드로 이동)
+// 허용된 계정 목록 (이메일/비밀번호 로그인용)
 const ALLOWED_ACCOUNTS: Record<string, string> = {
   "zero@udimpact.ai": "underdogs2024!",
   "admin@underdogs.co.kr": "underdogs2024!",
@@ -35,7 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, user]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    // 간단한 이메일/비밀번호 확인
     const normalizedEmail = email.trim().toLowerCase();
     if (ALLOWED_ACCOUNTS[normalizedEmail] && ALLOWED_ACCOUNTS[normalizedEmail] === password) {
       setIsAuthenticated(true);
@@ -45,14 +53,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return false;
   }, []);
 
-  const logout = useCallback(() => {
+  const loginWithGoogle = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!isFirebaseConfigured || !auth || !googleProvider) {
+      return { success: false, error: "Google 로그인이 아직 설정되지 않았습니다." };
+    }
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const email = result.user.email || "";
+      if (!email.endsWith("@udimpact.ai")) {
+        await firebaseSignOut(auth);
+        return {
+          success: false,
+          error: "udimpact.ai 도메인 계정만 가입할 수 있습니다.\n다른 Google 계정으로 다시 시도해 주세요.",
+        };
+      }
+      setIsAuthenticated(true);
+      setUser(email);
+      return { success: true };
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "auth/popup-closed-by-user") {
+        return { success: false };
+      }
+      return { success: false, error: "Google 로그인 중 오류가 발생했습니다." };
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    if (isFirebaseConfigured && auth) {
+      try { await firebaseSignOut(auth); } catch {}
+    }
     setIsAuthenticated(false);
     setUser(null);
     sessionStorage.removeItem(AUTH_STORAGE_KEY);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, login, loginWithGoogle, logout, isFirebaseReady: isFirebaseConfigured }}>
       {children}
     </AuthContext.Provider>
   );

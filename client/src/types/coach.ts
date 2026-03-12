@@ -59,9 +59,9 @@ export const TIER_LABELS: Record<number, Record<LangCode, string>> = {
 };
 
 export const TIER_SHORT: Record<number, string> = {
-  1: "베테랑",
-  2: "UD",
-  3: "외부",
+  1: "베테랑코치",
+  2: "UD코치",
+  3: "외부풀",
 };
 
 export const CATEGORY_LABELS: Record<string, Record<LangCode, string>> = {
