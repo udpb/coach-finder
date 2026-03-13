@@ -3,6 +3,7 @@
   "buildCommand": "node node_modules/vite/bin/vite.js build",
   "outputDirectory": "dist/public",
   "installCommand": "pnpm install",
+  "alias": ["underdogs-coach-finder.vercel.app"],
   "rewrites": [
     {
       "source": "/(.*)",
