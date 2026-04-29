@@ -1,0 +1,4 @@
+# NEVER commit Firebase service account credentials
+firebase-sa.json
+*-sa.json
+serviceAccountKey.json
