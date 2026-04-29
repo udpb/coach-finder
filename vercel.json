@@ -6,7 +6,7 @@
   "alias": ["underdogs-coach-finder.vercel.app"],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],

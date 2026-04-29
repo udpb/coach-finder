@@ -150,10 +150,64 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
+/**
+ * Phase C1: Serve /api/coaches in dev by invoking the same handler the
+ * Vercel serverless function uses (api/coaches.ts). Without this, the
+ * Vite proxy below would forward /api/coaches → localhost:8000 (Python),
+ * which is wrong now that coach data lives in Supabase.
+ *
+ * Loaded async so the @supabase/supabase-js import doesn't run at config
+ * eval time (and so a missing SUPABASE_URL/SERVICE_ROLE only fails the
+ * actual request, not the entire dev server boot).
+ */
+function vitePluginCoachesApi(): Plugin {
+  const handlerPath = path.resolve(import.meta.dirname, "api", "coaches.ts");
+  return {
+    name: "coaches-api-dev",
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use("/api/coaches", async (req, res, next) => {
+        if (req.method !== "GET") return next();
+        try {
+          // ssrLoadModule resolves filesystem paths directly when given absolute path.
+          const mod = await server.ssrLoadModule(handlerPath);
+          const handler = (mod as any).default;
+          let statusCode = 200;
+          const shim = {
+            setHeader: (k: string, v: string) => res.setHeader(k, v),
+            status(code: number) {
+              statusCode = code;
+              return shim;
+            },
+            json(body: unknown) {
+              res.statusCode = statusCode;
+              res.setHeader("Content-Type", "application/json");
+              res.end(JSON.stringify(body));
+            },
+          };
+          await handler({ method: req.method }, shim);
+        } catch (err) {
+          console.error("[vite] /api/coaches dev handler failed:", err);
+          if (!res.headersSent) {
+            res.statusCode = 500;
+            res.setHeader("Content-Type", "application/json");
+            res.end(
+              JSON.stringify({
+                error:
+                  "/api/coaches dev handler failed. Check SUPABASE_URL / SUPABASE_SERVICE_ROLE in .env.local.",
+              }),
+            );
+          }
+        }
+      });
+    },
+  };
+}
+
 const isDev = process.env.NODE_ENV !== "production";
 const plugins = [
   react(),
   tailwindcss(),
+  vitePluginCoachesApi(),
   ...(isDev ? [jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()] : []),
 ];
 

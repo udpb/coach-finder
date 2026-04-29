@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+import coachesHandler from "../api/coaches.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,11 +13,26 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Proxy /api requests to the Python FastAPI backend
+  // Phase C1: /api/coaches → Supabase coaches_directory.
+  // Handled in-process here (and by api/coaches.ts on Vercel in prod).
+  // Must be registered BEFORE the catch-all proxy below, otherwise it
+  // would be forwarded to the Python FAISS service.
+  app.get("/api/coaches", async (req, res) => {
+    try {
+      await coachesHandler(req as any, res as any);
+    } catch (err) {
+      console.error("/api/coaches handler error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal error" });
+      }
+    }
+  });
+
+  // Proxy remaining /api requests to the Python FastAPI backend
   app.use("/api", async (req, res) => {
     try {
       const targetUrl = `http://127.0.0.1:8000/api${req.url}`;
-      
+
       const options: RequestInit = {
         method: req.method,
         headers: {
@@ -31,7 +47,7 @@ async function startServer() {
 
       const response = await fetch(targetUrl, options);
       const data = await response.json().catch(() => ({}));
-      
+
       res.status(response.status).json(data);
     } catch (error) {
       console.error("Proxy error to FastAPI:", error);
