@@ -338,6 +338,15 @@ export default function Home() {
                 </span>
               </div>
 
+              {/* Hub return link (Phase H2) */}
+              <a
+                href="https://underdogs-hub.vercel.app/"
+                title="허브로 돌아가기"
+                className="text-[11px] text-muted-foreground hover:text-primary border border-border rounded px-2 py-1 ml-2 transition-colors"
+              >
+                ↩ Hub
+              </a>
+
               {/* 사용자 / 로그아웃 */}
               <div className="flex items-center gap-2 ml-2 pl-2 border-l border-border">
                 {user && (
