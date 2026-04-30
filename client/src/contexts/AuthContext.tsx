@@ -33,27 +33,19 @@ import { supabase, isSupabaseConfigured } from "@/lib/supabaseBrowser";
 export type UserRole = "admin" | "pm" | "coach";
 
 interface AuthContextType {
-  // ── Existing API (preserved for back-compat with current consumers) ──
   isAuthenticated: boolean;
   user: string | null; // email string (not full user object)
   isAdmin: boolean; // true iff role === 'admin' (admin-only, NOT admin-or-pm)
   login: (email: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  /**
-   * Back-compat alias for the auth-readiness signal.
-   * In Phase C4 this reflects Supabase readiness, not Firebase. Kept under
-   * the old name so `LoginPage` and friends compile unchanged. New code
-   * should prefer `isAuthReady`.
-   */
-  isFirebaseReady: boolean;
 
-  // ── New API added in C4 ──
+  // Phase C4 fields
   /** Full Supabase user object (or null when signed out). */
   currentUser: User | null;
   /** Role from public.profiles.role; null until first lookup resolves. */
   role: UserRole | null;
-  /** True once we've finished the initial getSession()/listener handshake. */
+  /** True once we've finished the initial getSession()/listener handshake AND Supabase is configured. */
   isAuthReady: boolean;
 }
 
@@ -276,14 +268,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         loginWithGoogle,
         logout,
-        // Back-compat: existing consumers gate on `isFirebaseReady`. We map it
-        // to "Supabase is configured AND we've finished initial auth check"
-        // so the LoginPage's Google button only shows when the OAuth backend
-        // is actually usable.
-        isFirebaseReady: isSupabaseConfigured && isAuthReady,
         currentUser,
         role,
-        isAuthReady,
+        // isAuthReady is true once Supabase is configured AND we've finished
+        // the initial getSession()/listener handshake. Consumers should gate
+        // OAuth UI on this so we don't flash a Google button before the
+        // backend is actually usable.
+        isAuthReady: isSupabaseConfigured && isAuthReady,
       }}
     >
       {children}

@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const { login, loginWithGoogle, isFirebaseReady } = useAuth();
+  const { login, loginWithGoogle, isAuthReady } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -70,7 +70,7 @@ export default function LoginPage() {
           </p>
 
           {/* Google Login Button */}
-          {isFirebaseReady && (
+          {isAuthReady && (
             <>
               <button
                 type="button"

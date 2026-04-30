@@ -78,10 +78,11 @@ already let `authenticated` users read.
 | `SUPABASE_URL` | Vercel + `.env.local` | `https://zwvrtxxgctyyctirntzj.supabase.co` |
 | `SUPABASE_SERVICE_ROLE` | Vercel + `.env.local` | service_role key from Supabase Dashboard → Project Settings → API → "Reveal" |
 
-### Existing (unchanged by C1)
+### Other (post Phase F — Firebase 0%)
 
-`VITE_FIREBASE_*`, `VITE_API_BASE_URL` — still required.
-See `.env.example` for the full list.
+`VITE_API_BASE_URL` — Cloud Run AI backend, still required for `/api/v1/recommend`.
+`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` — Supabase Auth + browser data fetch (Phase C4).
+See `.env.example` for the full list. All `VITE_FIREBASE_*` vars have been removed.
 
 ### How to set up
 
