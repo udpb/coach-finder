@@ -288,15 +288,18 @@ async function migrateCoachOverlay() {
       warn(`deleted coach external_id=${ext} not found; skipped`);
       continue;
     }
-    if (existing.status === "deleted") continue; // idempotent
+    // coaches_directory.status CHECK allows: active|inactive|archived|draft.
+    // We map Firestore's deleted[] → status='archived' (semantically: kept on
+    // record but no longer in active rotation).
+    if (existing.status === "archived") continue; // idempotent
     if (DRY_RUN) {
-      console.log(`  [dry-run] would set status='deleted' on coach external_id=${ext}`);
+      console.log(`  [dry-run] would set status='archived' on coach external_id=${ext}`);
       deletedCount++;
       continue;
     }
     const { error } = await supabase
       .from("coaches_directory")
-      .update({ status: "deleted" })
+      .update({ status: "archived" })
       .eq("external_id", ext);
     if (error) warn(`delete coach ${ext}: ${error.message}`);
     else deletedCount++;
